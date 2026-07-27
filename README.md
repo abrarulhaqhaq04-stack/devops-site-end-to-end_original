@@ -274,8 +274,8 @@ Once apply finishes, connect to your cluster:
 
 ** Note = if you create a any loadbalance please change into cluster ip and then apply the terraform destroy Why because terraform try to destroy but not successful in deleting lb because some dependecy on lb and it convert into infinite loop **
 
-# Optional 
-> how to create and access of the cluster with CLI command
+# Connect kubectl
+aws eks update-kubeconfig --region us-east-1 --name my-cluster
 
 # Create access entry
 aws eks create-access-entry \
@@ -293,8 +293,7 @@ aws eks associate-access-policy \
     --access-scope type=cluster \
     --region us-east-1
 
-# Connect kubectl
-aws eks update-kubeconfig --region us-east-1 --name my-cluster
+
 
 # Verify
 kubectl get nodes
