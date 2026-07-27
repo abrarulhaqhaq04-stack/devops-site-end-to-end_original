@@ -170,6 +170,10 @@ A. Configure aws credentials
 B. Create a terraform file for kubernetes cluster
 
 ----------------------------------------------------------------
+##################################################
+# 1. Terraform + Provider Setup
+##################################################
+
 terraform {
   required_version = ">= 1.3.0"
   required_providers {
@@ -184,54 +188,58 @@ provider "aws" {
   region = "us-east-1"
 }
 
-# VPC module
+##################################################
+# 2. Network (VPC)
+# Creates a virtual network with 2 public and
+# 2 private subnets across 2 availability zones.
+##################################################
+
 module "vpc" {
   source  = "terraform-aws-modules/vpc/aws"
   version = "~> 5.8"
 
-  name            = "my-vpc"
-  cidr            = "10.0.0.0/16"
-  azs             = ["us-east-1a", "us-east-1b", "us-east-1c"]
-  public_subnets  = ["10.0.101.0/24", "10.0.102.0/24", "10.0.103.0/24"]
-  private_subnets = ["10.0.1.0/24", "10.0.2.0/24", "10.0.3.0/24"]
+  name = "my-vpc"
+  cidr = "10.0.0.0/16"
+
+  azs             = ["us-east-1a", "us-east-1b"]
+  public_subnets  = ["10.0.101.0/24", "10.0.102.0/24"]
+  private_subnets = ["10.0.1.0/24", "10.0.2.0/24"]
 
   enable_nat_gateway = true
-  single_nat_gateway = true
+  single_nat_gateway = true # one NAT gateway = cheaper, good for dev
 
   tags = {
-    Terraform   = "true"
     Environment = "dev"
-  }
-
-  public_subnet_tags = {
-    "kubernetes.io/role/elb" = "1"
-  }
-
-  private_subnet_tags = {
-    "kubernetes.io/role/internal-elb" = "1"
   }
 }
 
-# EKS Cluster module
+##################################################
+# 3. Kubernetes Cluster (EKS)
+# Creates the cluster + one group of worker nodes
+# that run inside the private subnets above.
+##################################################
+
 module "eks" {
   source  = "terraform-aws-modules/eks/aws"
   version = "~> 21.0"
 
-  name               = "my-cluster"        # was: cluster_name
-  kubernetes_version = "1.30"              # was: cluster_version
+  name               = "my-cluster-1"
+  kubernetes_version = "1.30"
 
-  addons = {                               # was: cluster_addons
+  create_cloudwatch_log_group = false
+
+  addons = {
     coredns                = { most_recent = true }
     kube-proxy             = { most_recent = true }
     vpc-cni                = { most_recent = true }
     eks-pod-identity-agent = { most_recent = true }
   }
 
-  endpoint_public_access                   = true   # was: cluster_endpoint_public_access
-  enable_cluster_creator_admin_permissions = true
-
   vpc_id     = module.vpc.vpc_id
   subnet_ids = module.vpc.private_subnets
+
+  endpoint_public_access                   = true
+  enable_cluster_creator_admin_permissions = true
 
   eks_managed_node_groups = {
     default = {
@@ -244,7 +252,6 @@ module "eks" {
 
   tags = {
     Environment = "dev"
-    Terraform   = "true"
   }
 }
   
