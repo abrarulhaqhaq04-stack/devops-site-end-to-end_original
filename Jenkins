@@ -29,12 +29,12 @@ pipeline {
       steps {
         withCredentials([usernamePassword(
               credentialsId: 'DOCKERHUB_CRAD',
-          usernameVariable: 'DOCKER_USER',
-          passwordVariable: 'DOCKER_PASS'
+          usernameVariable: 'abrar33001',
+          passwordVariable: 'Docker'
         )]) {
           sh """
             echo \$DOCKER_PASS | docker login -u \$DOCKER_USER --password-stdin
-            docker tag ${IMAGE}:${env.VERSION} \$DOCKER_USER/${IMAGE}:${env.VERSION}
+            docker tag ${IMAGE}:${env.VERSION} \$DOCKER/${IMAGE}:${env.VERSION}
             docker push \$DOCKER_USER/${IMAGE}:${env.VERSION}
           """
         }
