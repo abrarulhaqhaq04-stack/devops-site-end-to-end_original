@@ -26,7 +26,7 @@ pipeline {
                     env.VERSION = VERSION
                 }
 
-                sh "docker build -t ${IMAGE}:${env.VERSION} ."
+                bat "docker build -t ${IMAGE}:${env.VERSION} ."
             }
         }
 
@@ -39,7 +39,7 @@ pipeline {
                         passwordVariable: 'DOCKER_PASS'
                     )
                 ]) {
-                    sh """
+                    bat """
                         echo "\$DOCKER_PASS" | docker login \
                             -u "\$DOCKER_USER" \
                             --password-stdin
@@ -63,7 +63,7 @@ pipeline {
                         passwordVariable: 'DOCKER_PASS'
                     )
                 ]) {
-                    sh """
+                    bat """
                         docker stop ${IMAGE} || true
                         docker rm ${IMAGE} || true
 
