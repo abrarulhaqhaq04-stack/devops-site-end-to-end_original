@@ -1,12 +1,10 @@
 pipeline {
     agent any
 
-    stages {
-        stage('Test Docker') {
-            steps {
-                bat 'where docker'
-                bat 'docker --version'
-            }
-        }
+ stage('Test Docker') {
+    steps {
+        bat '"C:\\Users\\abrar ul haq\\AppData\\Local\\Programs\\DockerDesktop\\resources\\bin\\docker.exe" --version'
+    }
+}
     }
 }
