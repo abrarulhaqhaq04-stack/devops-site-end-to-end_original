@@ -1,0 +1,95 @@
+```groovy
+pipeline {
+    agent any
+
+    environment {
+        IMAGE = "devops-site"
+    }
+
+    stages {
+
+        stage('Checkout') {
+            steps {
+                git branch: 'main',
+                    url: 'https://github.com/Devopsplan/devops-site-end-to-end.git'
+            }
+        }
+
+        stage('Build') {
+            steps {
+                script {
+                    env.VERSION = sh(
+                        script: "date +%Y%m%d%H%M",
+                        returnStdout: true
+                    ).trim()
+                }
+
+                sh "docker build -t ${IMAGE}:${VERSION} ."
+            }
+        }
+
+        stage('Login & Push') {
+            steps {
+                withCredentials([
+                    usernamePassword(
+                        credentialsId: 'DOCKERHUB_CRAD',
+                        usernameVariable: 'abrar33001',
+                        passwordVariable: 'Docker'
+                    )
+                ]) {
+                    sh '''
+                        echo "$DOCKER_PASS" | docker login \
+                            -u "$DOCKER_USER" \
+                            --password-stdin
+
+                        docker tag ${IMAGE}:${VERSION} \
+                            $DOCKER_USER/${IMAGE}:${VERSION}
+
+                        docker push \
+                            $DOCKER_USER/${IMAGE}:${VERSION}
+                    '''
+                }
+            }
+        }
+
+        stage('Deploy') {
+            steps {
+                withCredentials([
+                    usernamePassword(
+                        credentialsId: 'DOCKERHUB_CRAD',
+                        usernameVariable:'abrar33001',
+                        passwordVariable: 'Docker'
+                    )
+                ]) {
+                    sh '''
+                        docker stop ${IMAGE} || true
+                        docker rm ${IMAGE} || true
+
+                        docker pull $DOCKER_USER/${IMAGE}:${VERSION}
+
+                        docker run -d \
+                            --name ${IMAGE} \
+                            --restart unless-stopped \
+                            -p 5000:5000 \
+                            $DOCKER_USER/${IMAGE}:${VERSION}
+                    '''
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            echo "Build ${VERSION} deployed successfully."
+        }
+
+        failure {
+            echo "Pipeline failed. Check Jenkins console output."
+        }
+
+        always {
+            sh "docker logout || true"
+        }
+    }
+}
+```
