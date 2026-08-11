@@ -18,13 +18,15 @@ pipeline {
         stage('Build') {
             steps {
                 script {
-                    env.VERSION = sh(
+                    def VERSION = sh(
                         script: "date +%Y%m%d%H%M",
                         returnStdout: true
                     ).trim()
+
+                    env.VERSION = VERSION
                 }
 
-                sh "docker build -t ${IMAGE}:${VERSION} ."
+                sh "docker build -t ${IMAGE}:${env.VERSION} ."
             }
         }
 
@@ -33,21 +35,21 @@ pipeline {
                 withCredentials([
                     usernamePassword(
                         credentialsId: 'DOCKERHUB_CRAD',
-                        usernameVariable: 'abrar33001',
-                        passwordVariable: 'Docker'
+                        usernameVariable: 'DOCKER_USER',
+                        passwordVariable: 'DOCKER_PASS'
                     )
                 ]) {
-                    sh '''
-                        echo "$DOCKER_PASS" | docker login \
-                            -u "$DOCKER_USER" \
+                    sh """
+                        echo "\$DOCKER_PASS" | docker login \
+                            -u "\$DOCKER_USER" \
                             --password-stdin
 
-                        docker tag ${IMAGE}:${VERSION} \
-                            $DOCKER_USER/${IMAGE}:${VERSION}
+                        docker tag ${IMAGE}:${env.VERSION} \
+                            "\$DOCKER_USER/${IMAGE}:${env.VERSION}"
 
                         docker push \
-                            $DOCKER_USER/${IMAGE}:${VERSION}
-                    '''
+                            "\$DOCKER_USER/${IMAGE}:${env.VERSION}"
+                    """
                 }
             }
         }
@@ -57,22 +59,20 @@ pipeline {
                 withCredentials([
                     usernamePassword(
                         credentialsId: 'DOCKERHUB_CRAD',
-                        usernameVariable:'abrar33001',
-                        passwordVariable: 'Docker'
+                        usernameVariable: 'DOCKER_USER',
+                        passwordVariable: 'DOCKER_PASS'
                     )
                 ]) {
-                    sh '''
+                    sh """
                         docker stop ${IMAGE} || true
                         docker rm ${IMAGE} || true
-
-                        docker pull $DOCKER_USER/${IMAGE}:${VERSION}
 
                         docker run -d \
                             --name ${IMAGE} \
                             --restart unless-stopped \
                             -p 5000:5000 \
-                            $DOCKER_USER/${IMAGE}:${VERSION}
-                    '''
+                            "\$DOCKER_USER/${IMAGE}:${env.VERSION}"
+                    """
                 }
             }
         }
@@ -80,11 +80,11 @@ pipeline {
 
     post {
         success {
-            echo "Build ${VERSION} deployed successfully."
+            echo "Build ${env.VERSION} deployed successfully. Jenkins done."
         }
 
         failure {
-            echo "Pipeline failed. Check Jenkins console output."
+            echo "Pipeline failed. Check the logs above."
         }
 
         always {
