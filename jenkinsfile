@@ -80,7 +80,8 @@ pipeline {
         }
 
         always {
-            bat 'docker logout'
+        bat '"C:\\Users\\abrar ul haq\\AppData\\Local\\Programs\\DockerDesktop\\resources\\bin\\docker.exe" logout || exit /b 0'
+    
         }
     }
 }
