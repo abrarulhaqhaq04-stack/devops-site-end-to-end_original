@@ -4,8 +4,8 @@ pipeline {
     stages {
         stage('Test Docker') {
             steps {
+                bat 'where docker'
                 bat 'docker --version'
-                bat 'docker info'
             }
         }
     }
