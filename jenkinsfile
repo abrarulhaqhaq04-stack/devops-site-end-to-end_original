@@ -1,30 +1,24 @@
-
 pipeline {
+
     agent any
 
     environment {
-        IMAGE = "devops-site"
+        DOCKER = 'C:\\Users\\abrar ul haq\\AppData\\Local\\Programs\\DockerDesktop\\resources\\bin\\docker.exe'
+        DOCKER_IMAGE = 'abrar33001/devops-site'
+        CONTAINER_NAME = 'devops-site'
     }
 
     stages {
 
-        stage('Checkout') {
+        stage('Test Docker') {
             steps {
-                git(
-                    branch: 'main',
-                    url: 'https://github.com/abrarulhaqhaq04-stack/devops-site-end-to-end_original.git'
-                )
+                bat '"C:\\Users\\abrar ul haq\\AppData\\Local\\Programs\\DockerDesktop\\resources\\bin\\docker.exe" --version'
             }
         }
 
-        stage('Build') {
+        stage('Build Docker Image') {
             steps {
-                script {
-                    def VERSION = new Date().format("yyyyMMddHHmm")
-                    env.VERSION = VERSION
-                }
-
-                bat "docker build -t %IMAGE%:%VERSION% ."
+                bat '"C:\\Users\\abrar ul haq\\AppData\\Local\\Programs\\DockerDesktop\\resources\\bin\\docker.exe" build -t %DOCKER_IMAGE%:%BUILD_NUMBER% .'
             }
         }
 
@@ -32,17 +26,14 @@ pipeline {
             steps {
                 withCredentials([
                     usernamePassword(
-                        credentialsId: 'DOCKERHUB_CRAD',
-                        usernameVariable: 'DOCKER_USER',
-                        passwordVariable: 'DOCKER_PASS'
+                        credentialsId: 'dockerhub-credentials',
+                        usernameVariable: 'DOCKER_USERNAME',
+                        passwordVariable: 'DOCKER_PASSWORD'
                     )
                 ]) {
                     bat '''
-                        echo %DOCKER_PASS% | docker login -u %DOCKER_USER% --password-stdin
-
-                        docker tag %IMAGE%:%VERSION% %DOCKER_USER%/%IMAGE%:%VERSION%
-
-                        docker push %DOCKER_USER%/%IMAGE%:%VERSION%
+                        echo %DOCKER_PASSWORD% | "%DOCKER%" login -u %DOCKER_USERNAME% --password-stdin
+                        "%DOCKER%" push %DOCKER_IMAGE%:%BUILD_NUMBER%
                     '''
                 }
             }
@@ -50,39 +41,18 @@ pipeline {
 
         stage('Deploy') {
             steps {
-                withCredentials([
-                    usernamePassword(
-                        credentialsId: 'DOCKERHUB_CRAD',
-                        usernameVariable: 'DOCKER_USER',
-                        passwordVariable: 'DOCKER_PASS'
-                    )
-                ]) {
-                    bat '''
-                        docker stop %IMAGE% 2>NUL
-                        docker rm %IMAGE% 2>NUL
-
-                        docker run -d ^
-                            --name %IMAGE% ^
-                            --restart unless-stopped ^
-                            -p 5000:5000 ^
-                            %DOCKER_USER%/%IMAGE%:%VERSION%
-                    '''
-                }
+                bat '''
+                    "%DOCKER%" stop %CONTAINER_NAME% || exit /b 0
+                    "%DOCKER%" rm %CONTAINER_NAME% || exit /b 0
+                    "%DOCKER%" run -d --name %CONTAINER_NAME% -p 8080:80 %DOCKER_IMAGE%:%BUILD_NUMBER%
+                '''
             }
         }
     }
 
     post {
-        success {
-            echo "Build ${env.VERSION} deployed successfully."
-        }
-
-        failure {
-            echo "Pipeline failed. Check the Jenkins console output."
-        }
-
         always {
-            bat 'docker logout'
+            bat '"C:\\Users\\abrar ul haq\\AppData\\Local\\Programs\\DockerDesktop\\resources\\bin\\docker.exe" logout || exit /b 0'
         }
     }
 }
